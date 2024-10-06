@@ -4,8 +4,12 @@
 
 // Third-party libraries
 #include <Adafruit_NeoPixel.h>
+#ifdef __AVR__
+#include <avr/power.h> // Required for 16 MHz Adafruit Trinket
+#endif
 
 // Local sources
+#include "animation.h"
 #include "panel.h"
 
 /******************************************************************************
@@ -69,12 +73,20 @@ Adafruit_NeoPixel strip;
 // System panels
 panel panels[PANEL_N];
 
+// Flag LED changes
+bool led_updated;
+
+// Animation demo
+animation animation_demo;
+bool animation_created;
+
 // Update colors in the strip
 void update_strip_colors() {
   for (size_t i = 0; i < PANEL_N; i++) {
     if (panels[i].has_color_changed) {
       strip.fill(panels[i].color, panels[i].index, panels[i].n);
       panel_update_flag(&panels[i]);
+      led_updated = true;
     }
   }
 }
@@ -82,6 +94,11 @@ void update_strip_colors() {
 void setup() {
 #if DEBUG == true
   Serial.begin(BAUD_RATE);
+#endif
+
+#if defined(__AVR_ATtiny85__) && (F_CPU == 8000000)
+  // Initialize clock for animations
+  clock_prescale_set(clock_div_1);
 #endif
 
   // Initialize NeoPixel strip and turn LEDs off
@@ -99,13 +116,31 @@ void setup() {
 
   // Set panels to their default colors
   strip.show();
+
+  // Initialize flags
+  led_updated = false;
+  animation_created = false;
 }
 
 void loop() {
+#if DEBUG == true
+  // Set serial monitor interface
+  Serial.begin(BAUD_RATE);
+#endif
+
+  // Initialize animation (demo)
+  if (!animation_created) {
+    animation_demo = create_animation(1, false, 1, PANEL_N);
+    animation_created = true;
+  }
+
+  // Run animation sequence (demo)
+  run_sequence(&animation_demo, panels);
+
   // Update strip
   update_strip_colors();
-  strip.show();
-
-  // Wait
-  delay(DELAY);
+  if (led_updated) {
+    strip.show();
+    led_updated = false;
+  }
 }

@@ -12,14 +12,12 @@ Adafruit_NeoPixel create_strip(uint8_t n, uint8_t pin, uint16_t type) {
 }
 
 panel create_panel(uint8_t index, uint8_t n) {
-  panel panel = {index, n, BLACK};
-  panel.has_color_changed = true;
+  panel panel = {index, n, true, BLACK};
   return panel;
 }
 
-void set_panel_color(panel *panel, Adafruit_NeoPixel *strip, uint8_t r,
-                     uint8_t g, uint8_t b) {
-  panel->color = strip->Color(r, g, b);
+void set_panel_color(panel *panel, uint32_t RGB) {
+  panel->color = RGB;
   panel->has_color_changed = true;
 }
 
