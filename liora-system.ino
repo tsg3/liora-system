@@ -1,69 +1,111 @@
+/******************************************************************************
+ ******************************* Liora's System *******************************
+ ******************************************************************************/
+
+// Third-party libraries
 #include <Adafruit_NeoPixel.h>
 
-struct tambor {
-  uint32_t first_led;
-  uint32_t last_led;
-  uint32_t color;
-  uint32_t brightness;
-};
+// Local sources
+#include "panel.h"
 
-// Which pin on the Arduino is connected to the NeoPixels?
-// On a Trinket or Gemma we suggest changing this to 1:
-#define LED_PIN    10
+/******************************************************************************
+ ************************** Configuration parameters **************************
+ ******************************************************************************/
 
-// How many NeoPixels are attached to the Arduino?
+// Number of LEDs on the NeoPixel strip
 #define LED_COUNT 24
 
-// Declare our NeoPixel strip object:
-Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-// Argument 1 = Number of pixels in NeoPixel strip
-// Argument 2 = Arduino pin number (most are valid)
-// Argument 3 = Pixel type flags, add together as needed:
-//   NEO_KHZ800  800 KHz bitstream (most NeoPixel products w/WS2812 LEDs)
-//   NEO_KHZ400  400 KHz (classic 'v1' (not v2) FLORA pixels, WS2811 drivers)
-//   NEO_GRB     Pixels are wired for GRB bitstream (most NeoPixel products)
-//   NEO_RGB     Pixels are wired for RGB bitstream (v1 FLORA pixels, not v2)
-//   NEO_RGBW    Pixels are wired for RGBW bitstream (NeoPixel RGBW products)
+// Pin on the Arduino connected to the NeoPixel strip
+#define LED_PIN 10
 
-struct tambor tambor1 = {0, 4, strip.Color(255, 255, 255), 0};
-struct tambor tambor2 = {4, 4, strip.Color(255, 255, 255), 0};
-struct tambor tambor3 = {8, 4, strip.Color(255, 255, 255), 0};
-struct tambor tambor4 = {12, 4, strip.Color(255, 255, 255), 0};
-struct tambor tambor5 = {16, 4, strip.Color(255, 255, 255), 0};
-struct tambor tambor6 = {20, 4, strip.Color(255, 255, 255), 0};
+/*
+ * Number of LED panels (this number must match the number of rows of
+ * "panel_ranges").
+ */
+#define PANEL_N 19
 
-void updateTambor(struct tambor tamborN, uint32_t color) {
-  tamborN.color = color;
-  strip.fill(tamborN.color, tamborN.first_led, tamborN.last_led);
+// Default brightness for LEDs
+#define BRIGHTNESS 255
+
+// Panel ranges mapping (this number must match the value of "PANEL_N"
+const static uint8_t panel_ranges[][2] = {
+  {0, 1},  // 1st left panel
+  {1, 1},  // 2nd left panel
+  {2, 1},  // 3rd left panel
+  {3, 1},  // 4th left panel
+  {4, 1},  // 5th left panel
+  {5, 1},  // 6th left panel
+  {6, 1},  // 7th left panel
+  {7, 1},  // 1st right panel
+  {8, 1},  // 2nd right panel
+  {9, 1},  // 3rd right panel
+  {10, 1}, // 4th right panel
+  {11, 1}, // 5th right panel
+  {12, 1}, // 6th right panel
+  {13, 1}, // 7th right panel
+  {14, 2}, // Central panel
+  {16, 2}, // Upper-left arrow panel
+  {18, 2}, // Upper-right arrow panel
+  {20, 2}, // Bottom-right arrow panel
+  {22, 2}  // Bootom-left arrow panel
+};
+
+// Delay time
+#define DELAY 1000
+
+// Debug flag
+#define DEBUG false
+
+// Baud rate for the serial monitor
+#define BAUD_RATE 9600
+
+/******************************************************************************
+ ****************************** Configuration end *****************************
+ ******************************************************************************/
+
+// NeoPixel strip object
+Adafruit_NeoPixel strip;
+
+// System panels
+panel panels[PANEL_N];
+
+// Update colors in the strip
+void update_strip_colors() {
+  for (size_t i = 0; i < PANEL_N; i++) {
+    if (panels[i].has_color_changed) {
+      strip.fill(panels[i].color, panels[i].index, panels[i].n);
+      panel_update_flag(&panels[i]);
+    }
+  }
 }
 
 void setup() {
-  // put your setup code here, to run once:
+#if DEBUG == true
+  Serial.begin(BAUD_RATE);
+#endif
+
+  // Initialize NeoPixel strip and turn LEDs off
+  strip = create_strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
   strip.begin();
-  strip.show(); // Initialize all pixels to 'off'
-  uint32_t color = strip.Color(255, 255, 255);
-  //strip.setPixelColor(1, 255, 255, 255);
-  //strip.fill(color, 0, 24);
-  
-  //updateTambor(tambor1, tambor1.color);
-  //updateTambor(tambor2, tambor2.color);
-  //updateTambor(tambor3, tambor3.color);
-  //updateTambor(tambor4, tambor4.color);
-  //updateTambor(tambor5, tambor5.color);
-  //updateTambor(tambor6, tambor6.color);
+  strip.show();
 
-  strip.setPixelColor(0, 255, 255, 255);
-  strip.setPixelColor(4, 255, 255, 255);
-  strip.setPixelColor(8, 255, 255, 255);
-  strip.setPixelColor(12, 255, 255, 255);
-  strip.setPixelColor(16, 255, 255, 255);
-  strip.setPixelColor(20, 255, 255, 255);
+  // Initialize system panels
+  for (size_t i = 0; i < PANEL_N; i++) {
+    panels[i] = create_panel(panel_ranges[i][0], panel_ranges[i][1]);
+  }
 
-  strip.setBrightness(255);
+  // Set strip brightness
+  strip.setBrightness(BRIGHTNESS);
+
+  // Set panels to their default colors
   strip.show();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // Update strip
+  update_strip_colors();
   strip.show();
+
+  // Wait
+  delay(DELAY);
 }
